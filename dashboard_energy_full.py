@@ -167,14 +167,23 @@ tabs_children.append(dcc.Tab(label='KPIs', children=html.Div(kpi_sections, style
 
 # --- Visuals Tab ---
 # Time series consumption vs production
+# Time series consumption vs production
 if not consumption.empty and not production.empty:
-    daily_cons = consumption.groupby(['country_code', 'timestamp']).agg(total_mwh=('consumption_mwh','sum')).reset_index()
+    daily_cons = consumption.groupby(['country_code', 'timestamp']).agg(total_mwh_cons=('consumption_mwh','sum')).reset_index()
     daily_cons.rename(columns={'timestamp':'date'}, inplace=True)
-    daily_prod = production.groupby(['country_code', 'timestamp']).agg(total_mwh=('production_mwh','sum')).reset_index()
+    daily_prod = production.groupby(['country_code', 'timestamp']).agg(total_mwh_prod=('production_mwh','sum')).reset_index()
     daily_prod.rename(columns={'timestamp':'date'}, inplace=True)
+
+    # Merge sicuro
     time_df = pd.merge(daily_cons, daily_prod, on=['country_code','date'], how='outer')
-    time_df['total_mwh_cons'] = time_df['total_mwh_cons'].astype(float)
-    time_df['total_mwh_prod'] = time_df['total_mwh_prod'].astype(float)
+
+    # Assicurati che le colonne esistano e siano float
+    for col in ['total_mwh_cons','total_mwh_prod']:
+        if col not in time_df.columns:
+            time_df[col] = 0.0
+        else:
+            time_df[col] = time_df[col].astype(float)
+
     fig_time = px.line(
         time_df, x='date', y=['total_mwh_cons','total_mwh_prod'],
         color='country_code', labels={'value':'MWh','variable':'Serie', 'date':'Data'},
