@@ -82,45 +82,43 @@ for country in countries:
     energy_mix = prod_country.groupby('source_name')['production_mwh'].sum()
     energy_mix_percent = (energy_mix / energy_mix.sum() * 100).round(1).to_dict() if not energy_mix.empty else {}
 
- # Import ed Export annuali
-if not net_country.empty:
-    net_country['year'] = net_country['timestamp'].dt.year
+    # Import ed Export annuali
+    if not net_country.empty:
+        net_country['year'] = net_country['timestamp'].dt.year
 
-    yearly_import = (
-        net_country[net_country['to_country'] == country]
-        .groupby('year')['flow_mwh']
-        .sum()
-        .reset_index(name='Import')
-    )
+        yearly_import = (
+            net_country[net_country['to_country'] == country]
+            .groupby('year')['flow_mwh']
+            .sum()
+            .reset_index(name='Import')
+        )
 
-    yearly_export = (
-        net_country[net_country['from_country'] == country]
-        .groupby('year')['flow_mwh']
-        .sum()
-        .reset_index(name='Export')
-    )
+        yearly_export = (
+            net_country[net_country['from_country'] == country]
+            .groupby('year')['flow_mwh']
+            .sum()
+            .reset_index(name='Export')
+        )
 
-    # Merge con yearly_totals
-    yearly_totals = yearly_totals.merge(yearly_import, on='year', how='left') \
-                                 .merge(yearly_export, on='year', how='left')
-    yearly_totals[['Import','Export']] = yearly_totals[['Import','Export']].fillna(0)
-    yearly_totals['Net Import/Export'] = yearly_totals['Import'] - yearly_totals['Export']
-else:
-    yearly_totals['Import'] = 0
-    yearly_totals['Export'] = 0
-    yearly_totals['Net Import/Export'] = 0
+        # Merge con yearly_totals
+        yearly_totals = yearly_totals.merge(yearly_import, on='year', how='left') \
+                                     .merge(yearly_export, on='year', how='left')
+        yearly_totals[['Import','Export']] = yearly_totals[['Import','Export']].fillna(0)
+        yearly_totals['Net Import/Export'] = yearly_totals['Import'] - yearly_totals['Export']
+    else:
+        yearly_totals['Import'] = 0
+        yearly_totals['Export'] = 0
+        yearly_totals['Net Import/Export'] = 0
 
-
-
-kpi_list.append({
-    'country': country,
-    'daily': daily_totals,
-    'monthly': monthly_totals,
-    'yearly': yearly_totals,
-    'total_prod': total_prod,
-    'energy_mix_percent': energy_mix_percent
-})
-
+    # Append a kpi_list
+    kpi_list.append({
+        'country': country,
+        'daily': daily_totals,
+        'monthly': monthly_totals,
+        'yearly': yearly_totals,
+        'total_prod': total_prod,
+        'energy_mix_percent': energy_mix_percent
+    })
 # ------------------------------
 # Dash App
 # ------------------------------
@@ -143,7 +141,6 @@ def kpi_box(title, value, subtitle=None):
 # ------------------------------
 tabs_children = []
 
-# --- KPI Tab ---
 # --- KPI Tab ---
 kpi_sections = []
 for kpi in kpi_list:
@@ -169,7 +166,7 @@ for kpi in kpi_list:
         dcc.Tab(label='Yearly', children=html.Div([yearly_table], style={'padding':'10px'}))
     ])
 
-    # Production aggregations
+    # Production tables (unchanged)
     prod_country = production[production['country_code'] == country].copy()
     if not prod_country.empty:
         # Daily
@@ -193,7 +190,6 @@ for kpi in kpi_list:
             data=prod_yearly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
         )
 
-        # Tabs per Production
         production_tab = dcc.Tabs([
             dcc.Tab(label='Daily', children=html.Div([prod_daily_table], style={'padding':'10px'})),
             dcc.Tab(label='Monthly', children=html.Div([prod_monthly_table], style={'padding':'10px'})),
@@ -202,13 +198,24 @@ for kpi in kpi_list:
     else:
         production_tab = html.Div("No production data", style={'padding':'10px'})
 
-    # Append section
+    # Net Flows tab
+    net_df = kpi['yearly'][['year','Import','Export','Net Import/Export']].copy()
+    net_table = dash_table.DataTable(
+        columns=[{"name": i, "id": i} for i in net_df.columns],
+        data=net_df.to_dict('records'),
+        page_size=10,
+        style_table={'overflowX':'auto'}
+    )
+    net_tab = dcc.Tabs([dcc.Tab(label='Yearly Net', children=html.Div([net_table], style={'padding':'10px'}))])
+
+    # Sezione paese con tutte le tab
     kpi_sections.append(
         html.Div([
             html.H3(f"{country}", style={'textAlign':'center','marginBottom':'10px'}),
             dcc.Tabs([
                 dcc.Tab(label='Consumption', children=consumption_tab),
                 dcc.Tab(label='Production & Energy Mix', children=production_tab),
+                dcc.Tab(label='Net Flows', children=net_tab)
             ])
         ], style={'marginBottom':'30px'})
     )
