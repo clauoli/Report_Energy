@@ -5,11 +5,14 @@ from dash import html, dcc, dash_table
 import plotly.express as px
 from sqlalchemy import create_engine
 from connect_local import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
-
+import os
 # ------------------------------
 # Connessione al DB
 # ------------------------------
-engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
+DB_URL = os.getenv("DATABASE_URL")  # copia l'Internal Database URL nelle env vars di Render
+
+engine = create_engine(DB_URL)
 
 def fetch_df(query):
     try:
