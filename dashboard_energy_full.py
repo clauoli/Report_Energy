@@ -166,37 +166,40 @@ for kpi in kpi_list:
         dcc.Tab(label='Yearly', children=html.Div([yearly_table], style={'padding':'10px'}))
     ])
 
-    # Production tables (unchanged)
-    prod_country = production[production['country_code'] == country].copy()
-    if not prod_country.empty:
-        # Daily
-        prod_daily = prod_country.groupby(['date','source_name'])['production_mwh'].sum().reset_index()
-        prod_daily_table = dash_table.DataTable(
-            columns=[{"name": i, "id": i} for i in prod_daily.columns],
-            data=prod_daily.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
-        )
-        # Monthly
-        prod_country['month_start'] = prod_country['timestamp'].dt.to_period('M').apply(lambda r: r.start_time)
-        prod_monthly = prod_country.groupby(['month_start','source_name'])['production_mwh'].sum().reset_index()
-        prod_monthly_table = dash_table.DataTable(
-            columns=[{"name": i, "id": i} for i in prod_monthly.columns],
-            data=prod_monthly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
-        )
-        # Yearly
-        prod_country['year'] = prod_country['timestamp'].dt.year
-        prod_yearly = prod_country.groupby(['year','source_name'])['production_mwh'].sum().reset_index()
-        prod_yearly_table = dash_table.DataTable(
-            columns=[{"name": i, "id": i} for i in prod_yearly.columns],
-            data=prod_yearly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
-        )
+# Production aggregations corretti
+prod_country = production[production['country_code'] == country].copy()
+if not prod_country.empty:
+    # Daily
+    prod_daily = prod_country.groupby(['date','source_name'])['production_mwh'].sum().reset_index()
+    prod_daily_table = dash_table.DataTable(
+        columns=[{"name": i, "id": i} for i in prod_daily.columns],
+        data=prod_daily.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+    )
 
-        production_tab = dcc.Tabs([
-            dcc.Tab(label='Daily', children=html.Div([prod_daily_table], style={'padding':'10px'})),
-            dcc.Tab(label='Monthly', children=html.Div([prod_monthly_table], style={'padding':'10px'})),
-            dcc.Tab(label='Yearly', children=html.Div([prod_yearly_table], style={'padding':'10px'}))
-        ])
-    else:
-        production_tab = html.Div("No production data", style={'padding':'10px'})
+    # Monthly
+    prod_country['month_start'] = prod_country['timestamp'].dt.to_period('M').dt.start_time
+    prod_monthly = prod_country.groupby(['month_start','source_name'])['production_mwh'].sum().reset_index()
+    prod_monthly_table = dash_table.DataTable(
+        columns=[{"name": i, "id": i} for i in prod_monthly.columns],
+        data=prod_monthly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+    )
+
+    # Yearly
+    prod_country['year'] = prod_country['timestamp'].dt.year
+    prod_yearly = prod_country.groupby(['year','source_name'])['production_mwh'].sum().reset_index()
+    prod_yearly_table = dash_table.DataTable(
+        columns=[{"name": i, "id": i} for i in prod_yearly.columns],
+        data=prod_yearly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+    )
+
+    production_tab = dcc.Tabs([
+        dcc.Tab(label='Daily', children=html.Div([prod_daily_table], style={'padding':'10px'})),
+        dcc.Tab(label='Monthly', children=html.Div([prod_monthly_table], style={'padding':'10px'})),
+        dcc.Tab(label='Yearly', children=html.Div([prod_yearly_table], style={'padding':'10px'}))
+    ])
+else:
+    production_tab = html.Div("No production data", style={'padding':'10px'})
+
 
     # Net Flows tab
     net_df = kpi['yearly'][['year','Import','Export','Net Import/Export']].copy()
