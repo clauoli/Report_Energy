@@ -75,7 +75,7 @@ for country in countries:
     monthly_totals = cons_country.groupby('month_start')['consumption_mwh'].sum().reset_index(name='total')
     monthly_totals['avg'] = monthly_totals['total'].mean()
     yearly_totals = cons_country.groupby('year')['consumption_mwh'].sum().reset_index(name='total')
-    yearly_totals['avg'] = daily_totals['total'].mean()
+    yearly_totals['avg'] = daily_totals['total'].mean()  # media giornaliera complessiva
 
     # KPI Produzione
     total_prod = prod_country['production_mwh'].sum()
@@ -87,8 +87,23 @@ for country in countries:
         total_in = net_country[net_country['to_country'] == country]['flow_mwh'].sum()
         total_out = net_country[net_country['from_country'] == country]['flow_mwh'].sum()
         net_import_export = total_in - total_out
+            # Import ed Export per anno
+        net_country['year'] = net_country['timestamp'].dt.year
+        yearly_import = net_country.groupby('year').apply(lambda x: x[x['to_country'] == country]['flow_mwh'].sum()).reset_index(name='Import')
+        yearly_export = net_country.groupby('year').apply(lambda x: x[x['from_country'] == country]['flow_mwh'].sum()).reset_index(name='Export')
+
+    # Merge con yearly_totals
+        yearly_totals = yearly_totals.merge(yearly_import, on='year', how='left').merge(yearly_export, on='year', how='left')
+        yearly_totals['Import'] = yearly_totals['Import'].fillna(0)
+        yearly_totals['Export'] = yearly_totals['Export'].fillna(0)
+        yearly_totals['Net Import/Export'] = yearly_totals['Import'] - yearly_totals['Export']
+
     else:
         net_import_export = 0
+        yearly_totals['Import'] = 0
+        yearly_totals['Export'] = 0
+        yearly_totals['Net Import/Export'] = 0
+
 
     kpi_list.append({
         'country': country,
