@@ -66,7 +66,7 @@ for country in countries:
         net_country['timestamp'] = net_country['timestamp'].dt.tz_convert(None)
 
     # Periodi
-    cons_country['month_start'] = cons_country['timestamp'].dt.to_period('M').apply(lambda r: r.start_time)
+    cons_country['month_start'] = cons_country['timestamp'].dt.to_period('M').dt.start_time
     cons_country['year'] = cons_country['timestamp'].dt.year
 
     # Totali giornalieri, mensili, annuali
