@@ -10,7 +10,7 @@ import os
 # Connessione al DB
 # ------------------------------
 
-DB_URL = os.getenv("DATABASE_URL")  # copia l'Internal Database URL nelle env vars di Render
+DB_URL = os.getenv("DB_URL")  # copia l'Internal Database URL nelle env vars di Render
 
 engine = create_engine(DB_URL)
 
