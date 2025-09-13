@@ -82,8 +82,7 @@ for country in countries:
     energy_mix = prod_country.groupby('source_name')['production_mwh'].sum()
     energy_mix_percent = (energy_mix / energy_mix.sum() * 100).round(1).to_dict() if not energy_mix.empty else {}
 
-    # KPI Net Import/Export
-# Import ed Export annuali
+ # Import ed Export annuali
 if not net_country.empty:
     net_country['year'] = net_country['timestamp'].dt.year
 
@@ -112,15 +111,15 @@ else:
     yearly_totals['Net Import/Export'] = 0
 
 
+
     kpi_list.append({
         'country': country,
         'daily': daily_totals,
         'monthly': monthly_totals,
         'yearly': yearly_totals,
         'total_prod': total_prod,
-        'energy_mix_percent': energy_mix_percent,
-        'net_import_export': net_import_export
-    })
+        'energy_mix_percent': energy_mix_percent
+                })
 
 # ------------------------------
 # Dash App
@@ -145,10 +144,12 @@ def kpi_box(title, value, subtitle=None):
 tabs_children = []
 
 # --- KPI Tab ---
+# --- KPI Tab ---
 kpi_sections = []
 for kpi in kpi_list:
     country = kpi['country']
 
+    # Consumption tables
     daily_table = dash_table.DataTable(
         columns=[{"name": i, "id": i} for i in kpi['daily'].columns],
         data=kpi['daily'].to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
@@ -168,26 +169,46 @@ for kpi in kpi_list:
         dcc.Tab(label='Yearly', children=html.Div([yearly_table], style={'padding':'10px'}))
     ])
 
-    prod_df = pd.DataFrame(list(kpi['energy_mix_percent'].items()), columns=['Source', 'Percentage'])
-    prod_df['Total Production (MWh)'] = prod_df['Percentage'] / 100 * kpi['total_prod']
-    prod_table = dash_table.DataTable(
-        columns=[{"name": i, "id": i} for i in prod_df.columns],
-        data=prod_df.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
-    )
+    # Production aggregations
+    prod_country = production[production['country_code'] == country].copy()
+    if not prod_country.empty:
+        # Daily
+        prod_daily = prod_country.groupby(['date','source_name'])['production_mwh'].sum().reset_index()
+        prod_daily_table = dash_table.DataTable(
+            columns=[{"name": i, "id": i} for i in prod_daily.columns],
+            data=prod_daily.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+        )
+        # Monthly
+        prod_country['month_start'] = prod_country['timestamp'].dt.to_period('M').apply(lambda r: r.start_time)
+        prod_monthly = prod_country.groupby(['month_start','source_name'])['production_mwh'].sum().reset_index()
+        prod_monthly_table = dash_table.DataTable(
+            columns=[{"name": i, "id": i} for i in prod_monthly.columns],
+            data=prod_monthly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+        )
+        # Yearly
+        prod_country['year'] = prod_country['timestamp'].dt.year
+        prod_yearly = prod_country.groupby(['year','source_name'])['production_mwh'].sum().reset_index()
+        prod_yearly_table = dash_table.DataTable(
+            columns=[{"name": i, "id": i} for i in prod_yearly.columns],
+            data=prod_yearly.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
+        )
 
-    net_df = pd.DataFrame([{'Net Import/Export (MWh)': kpi['net_import_export']}])
-    net_table = dash_table.DataTable(
-        columns=[{"name": i, "id": i} for i in net_df.columns],
-        data=net_df.to_dict('records'), style_table={'overflowX':'auto'}
-    )
+        # Tabs per Production
+        production_tab = dcc.Tabs([
+            dcc.Tab(label='Daily', children=html.Div([prod_daily_table], style={'padding':'10px'})),
+            dcc.Tab(label='Monthly', children=html.Div([prod_monthly_table], style={'padding':'10px'})),
+            dcc.Tab(label='Yearly', children=html.Div([prod_yearly_table], style={'padding':'10px'}))
+        ])
+    else:
+        production_tab = html.Div("No production data", style={'padding':'10px'})
 
+    # Append section
     kpi_sections.append(
         html.Div([
             html.H3(f"{country}", style={'textAlign':'center','marginBottom':'10px'}),
             dcc.Tabs([
                 dcc.Tab(label='Consumption', children=consumption_tab),
-                dcc.Tab(label='Production & Energy Mix', children=html.Div([prod_table], style={'padding':'10px'})),
-                dcc.Tab(label='Net Import/Export', children=html.Div([net_table], style={'padding':'10px'}))
+                dcc.Tab(label='Production & Energy Mix', children=production_tab),
             ])
         ], style={'marginBottom':'30px'})
     )
