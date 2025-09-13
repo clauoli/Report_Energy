@@ -147,7 +147,7 @@ for kpi in kpi_list:
     ])
 
     prod_df = pd.DataFrame(list(kpi['energy_mix_percent'].items()), columns=['Source', 'Percentage'])
-    prod_df['Total Production (MWh)'] = prod_df['Percentage'] / 100 * prod_df['Percentage'].sum()
+    prod_df['Total Production (MWh)'] = prod_df['Percentage'] / 100 * kpi['total_prod']
     prod_table = dash_table.DataTable(
         columns=[{"name": i, "id": i} for i in prod_df.columns],
         data=prod_df.to_dict('records'), page_size=10, style_table={'overflowX':'auto'}
