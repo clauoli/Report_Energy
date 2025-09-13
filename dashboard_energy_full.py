@@ -112,14 +112,14 @@ else:
 
 
 
-    kpi_list.append({
-        'country': country,
-        'daily': daily_totals,
-        'monthly': monthly_totals,
-        'yearly': yearly_totals,
-        'total_prod': total_prod,
-        'energy_mix_percent': energy_mix_percent
-                })
+kpi_list.append({
+    'country': country,
+    'daily': daily_totals,
+    'monthly': monthly_totals,
+    'yearly': yearly_totals,
+    'total_prod': total_prod,
+    'energy_mix_percent': energy_mix_percent
+})
 
 # ------------------------------
 # Dash App
