@@ -30,7 +30,7 @@ logging.info(f"Inizio import dati")
 # ------------------------------
 # ENTSO-E API
 # ------------------------------
-API_KEY = os.getenv("ENTSOE_API_KEY", "default_api_key")
+API_KEY = os.getenv("API_KEY")
 client = EntsoePandasClient(api_key=API_KEY)
 
 # ------------------------------

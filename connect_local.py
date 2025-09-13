@@ -1,11 +1,11 @@
 import os
 import psycopg2
 
-DB_HOST = os.getenv("DB_HOST", "dpg-d32nlsjuibrs73a0u4ag-a")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "energy_ce")
-DB_USER = os.getenv("DB_USER", "postgres2")
-DB_PASS = os.getenv("DB_PASS", "oTLDleeGnCT8SOMQEgRNjlwZ8k60wgsl")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
 
 def get_connection():
     try:
