@@ -40,6 +40,14 @@ for df in [consumption, production, flows]:
     if not df.empty:
         df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
 
+# Aggiungi colonna 'date' per evitare errori
+if not consumption.empty:
+    consumption['date'] = consumption['timestamp'].dt.date
+if not production.empty:
+    production['date'] = production['timestamp'].dt.date
+if not flows.empty:
+    flows['date'] = flows['timestamp'].dt.date
+
 # ------------------------------
 # KPI per paese
 # ------------------------------
@@ -58,7 +66,6 @@ for country in countries:
         net_country['timestamp'] = net_country['timestamp'].dt.tz_convert(None)
 
     # Periodi
-    cons_country['date'] = cons_country['timestamp'].dt.date
     cons_country['month_start'] = cons_country['timestamp'].dt.to_period('M').apply(lambda r: r.start_time)
     cons_country['year'] = cons_country['timestamp'].dt.year
 
@@ -166,27 +173,18 @@ for kpi in kpi_list:
 tabs_children.append(dcc.Tab(label='KPIs', children=html.Div(kpi_sections, style={'padding':'20px'})))
 
 # --- Visuals Tab ---
-# Time series consumption vs production
-# Time series consumption vs production
 if not consumption.empty and not production.empty:
-    daily_cons = consumption.groupby(['country_code', 'timestamp']).agg(total_mwh_cons=('consumption_mwh','sum')).reset_index()
-    daily_cons.rename(columns={'timestamp':'date'}, inplace=True)
-    daily_prod = production.groupby(['country_code', 'timestamp']).agg(total_mwh_prod=('production_mwh','sum')).reset_index()
-    daily_prod.rename(columns={'timestamp':'date'}, inplace=True)
-
-    # Merge sicuro
+    daily_cons = consumption.groupby(['country_code','date']).agg(total_mwh_cons=('consumption_mwh','sum')).reset_index()
+    daily_prod = production.groupby(['country_code','date']).agg(total_mwh_prod=('production_mwh','sum')).reset_index()
     time_df = pd.merge(daily_cons, daily_prod, on=['country_code','date'], how='outer')
-
-    # Assicurati che le colonne esistano e siano float
     for col in ['total_mwh_cons','total_mwh_prod']:
         if col not in time_df.columns:
             time_df[col] = 0.0
         else:
             time_df[col] = time_df[col].astype(float)
-
     fig_time = px.line(
         time_df, x='date', y=['total_mwh_cons','total_mwh_prod'],
-        color='country_code', labels={'value':'MWh','variable':'Serie', 'date':'Data'},
+        color='country_code', labels={'value':'MWh','variable':'Serie','date':'Data'},
         title='Time series: consumption vs. production'
     )
 else:
@@ -197,7 +195,7 @@ fig_mix = px.area(
     production, x='timestamp', y='production_mwh', color='source_name',
     facet_col='country_code', title='Stacked area: production mix',
     labels={'production_mwh':'MWh','source_name':'Fonte'}
-)
+) if not production.empty else px.area(title='No production data')
 
 # Net balance
 if not flows.empty:
@@ -211,8 +209,7 @@ if not flows.empty:
     fig_net = px.bar(
         net_balance.melt(id_vars='country', value_vars=['export','import','net_balance']),
         x='country', y='value', color='variable',
-        barmode='group',
-        title='Bar chart: net flows by country'
+        barmode='group', title='Bar chart: net flows by country'
     )
 else:
     fig_net = px.bar(title='No flow data')
@@ -229,6 +226,8 @@ if not consumption.empty:
     )
 else:
     fig_heat = px.density_heatmap(title='No consumption data')
+
+ 
 
 tabs_children.append(dcc.Tab(label='Visuals', children=html.Div([
     dcc.Graph(figure=fig_time),
